@@ -26,9 +26,8 @@
 #import "RSTwitterEngine.h"
 
 // Never share this information
-#error  Put your Consumer Key and Secret here, then remove this error
-#define TW_CONSUMER_KEY @""
-#define TW_CONSUMER_SECRET @""
+#define TW_CONSUMER_KEY kOAuthConsumerKey
+#define TW_CONSUMER_SECRET kOAuthConsumerSecret
 
 // This will be called after the user authorizes your app
 #define TW_CALLBACK_URL @"rstwitterengine://auth_token"
@@ -37,7 +36,7 @@
 #define TW_HOSTNAME @"api.twitter.com"
 #define TW_REQUEST_TOKEN @"oauth/request_token"
 #define TW_ACCESS_TOKEN @"oauth/access_token"
-#define TW_STATUS_UPDATE @"1/statuses/update.json"
+#define TW_STATUS_UPDATE @"1.1/statuses/update_with_media.json"
 
 // URL to redirect the user for authentication
 #define TW_AUTHORIZE(__TOKEN__) [NSString stringWithFormat:@"https://api.twitter.com/oauth/authorize?oauth_token=%@", __TOKEN__]
@@ -256,6 +255,48 @@
 }
 
 #pragma mark - Public Methods
+
+- (void)sendTweet:(NSString *)tweet image:(UIImage*)image withCompletionBlock:(RSTwitterEngineCompletionBlock)completionBlock
+{
+    if (!self.isAuthenticated) {
+        [self authenticateWithCompletionBlock:^(NSError *error) {
+            if (error) {
+                // Authentication failed, return the error
+                completionBlock(error);
+            } else {
+                // Authentication succeeded, call this method again
+                [self sendTweet:tweet withCompletionBlock:completionBlock];
+            }
+        }];
+        
+        // This method will be called again once the authentication completes
+        return;
+    }
+    
+    // Fill the post body with the tweet
+    NSMutableDictionary *postParams = [NSMutableDictionary dictionaryWithObjectsAndKeys:
+                                       tweet, @"status",
+                                       nil];
+    
+    // If the user marks the option "HTTPS Only" in his/her profile,
+    // Twitter will fail all non-auth requests that use only HTTP
+    // with a misleading "OAuth error". I guess it's a bug.
+    MKNetworkOperation *op = [self operationWithPath:TW_STATUS_UPDATE
+                                              params:postParams
+                                          httpMethod:@"POST"
+                                                 ssl:YES];
+    
+    [op addData:UIImagePNGRepresentation(image) forKey:@"media[]" mimeType:@"application/octet-stream" fileName:@"media.png"];
+    
+    [op addCompletionHandler:^(MKNetworkOperation *completedOperation) {
+        completionBlock(nil);
+    } errorHandler:^(MKNetworkOperation *completedOperation, NSError *error) {
+        completionBlock(error);
+    }];
+    
+    [self.delegate twitterEngine:self statusUpdate:@"Sending tweet..."];
+    [self enqueueSignedOperation:op];
+}
 
 - (void)sendTweet:(NSString *)tweet withCompletionBlock:(RSTwitterEngineCompletionBlock)completionBlock
 {

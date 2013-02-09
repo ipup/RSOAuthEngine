@@ -44,6 +44,7 @@ typedef void (^RSTwitterEngineCompletionBlock)(NSError *error);
 - (void)cancelAuthentication;
 - (void)forgetStoredToken;
 - (void)sendTweet:(NSString *)tweet withCompletionBlock:(RSTwitterEngineCompletionBlock)completionBlock;
+- (void)sendTweet:(NSString *)tweet image:(UIImage*)image withCompletionBlock:(RSTwitterEngineCompletionBlock)completionBlock;
 
 @end
 
