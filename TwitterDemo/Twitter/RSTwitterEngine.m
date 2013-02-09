@@ -265,7 +265,7 @@
                 completionBlock(error);
             } else {
                 // Authentication succeeded, call this method again
-                [self sendTweet:tweet withCompletionBlock:completionBlock];
+                [self sendTweet:tweet image:image withCompletionBlock:completionBlock];
             }
         }];
         
